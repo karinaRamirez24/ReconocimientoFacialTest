@@ -68,20 +68,19 @@ export default function VerifyScreen({ route, navigation }: any) {
 
         if (response.data.status === 'success') {
           if (!response.data.face_detected) {
-            Alert.alert('❌ No se detectó un rostro en la imagen capturada');
+            Alert.alert('❌ No se detectó rostro en la imagen capturada');
             return;
           }
 
           if (response.data.match) {
-            console.log('✅ Rostro coincide, navegando a Success');
+            Alert.alert('✅ Verificación exitosa');
             navigation.navigate('Success');
           } else {
-            console.log('❌ Rostro no coincide');
+            Alert.alert('❌ Rostro no coincide', 'Intenta capturar la imagen nuevamente.');
             setVerificationFailed(true);
-            Alert.alert('❌ Rostro no coincide');
           }
         } else {
-          Alert.alert('⚠️ Error en el backend:', response.data.message);
+          Alert.alert('⚠️ Error en el backend', response.data.message || 'Intenta más tarde.');
         }
       };
 
@@ -154,7 +153,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 20,
-    backgroundColor: '#0b5014ff',
+    backgroundColor: '#FF6F00',
     padding: 12,
     borderRadius: 8,
   },

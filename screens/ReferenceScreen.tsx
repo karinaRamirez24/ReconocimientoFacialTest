@@ -8,7 +8,8 @@ export default function ReferenceScreen({ navigation }: any) {
   const [hasPermission, setHasPermission] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<CameraDevice | null>(null);
   const camera = useRef<Camera>(null);
-  const devices = useCameraDevices();
+  const devices = useCameraDevices('front');
+
 
   useEffect(() => {
     const requestPermission = async () => {
@@ -26,6 +27,8 @@ export default function ReferenceScreen({ navigation }: any) {
       setSelectedDevice(allDevices[0]);
     }
   }, [devices]);
+
+
 
   const captureReference = async () => {
     try {
@@ -69,7 +72,7 @@ export default function ReferenceScreen({ navigation }: any) {
   if (!hasPermission || !selectedDevice) {
     return (
       <View style={styles.center}>
-        <Text style={styles.text}>📷 Cargando cámara...</Text>
+        <Text style={styles.text}>Cargando cámara...</Text>
       </View>
     );
   }
@@ -78,7 +81,7 @@ export default function ReferenceScreen({ navigation }: any) {
     <View style={styles.container}>
       <Camera ref={camera} style={StyleSheet.absoluteFill} device={selectedDevice} isActive={true} photo={true} />
       <TouchableOpacity style={styles.captureButton} onPress={captureReference}>
-        <Text style={styles.buttonText}>📸 Capturar referencia</Text>
+        <Text style={styles.buttonText}> Capturar</Text>
       </TouchableOpacity>
     </View>
   );
@@ -92,9 +95,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 40,
     alignSelf: 'center',
-    backgroundColor: '#2196F3',
+    backgroundColor: '#0c0c0cff',
     padding: 15,
     borderRadius: 10,
+    borderColor: '#00d1b2',
   },
   buttonText: { color: 'white', fontSize: 18 },
 });

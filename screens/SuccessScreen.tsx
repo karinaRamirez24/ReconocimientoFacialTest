@@ -1,17 +1,29 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function SuccessScreen() {
+export default function SuccessScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>✅ Identidad verificada</Text>
-      <Text style={styles.subtext}>Acceso autorizado</Text>
+      <Text style={styles.title}>✅ Verificación Exitosa</Text>
+      <Text style={styles.details}>Tu identidad ha sido confirmada correctamente.</Text>
+
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Home')}>
+        <Text style={styles.buttonText}>🏠 Volver al inicio</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#111' },
-  text: { color: '#00D1B2', fontSize: 24, fontWeight: 'bold' },
-  subtext: { color: 'white', fontSize: 16, marginTop: 10 },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#E8F5E9' },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#2E7D32', marginBottom: 20 },
+  details: { fontSize: 16, color: '#4CAF50', textAlign: 'center', marginHorizontal: 30 },
+  button: {
+    marginTop: 30,
+    backgroundColor: '#388E3C',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+  },
+  buttonText: { color: 'white', fontSize: 16 },
 });
