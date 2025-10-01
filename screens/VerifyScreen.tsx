@@ -1,12 +1,25 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
-import { Camera, useCameraDevices, PhotoFile, CameraDevice } from 'react-native-vision-camera';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Image,
+} from 'react-native';
+import {
+  Camera,
+  useCameraDevices,
+  PhotoFile,
+  CameraDevice,
+} from 'react-native-vision-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 export default function VerifyScreen({ route, navigation }: any) {
   const [hasPermission, setHasPermission] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<CameraDevice | null>(null);
+  const [usingFrontCamera, setUsingFrontCamera] = useState(true);
   const [reference, setReference] = useState<string | null>(route.params?.reference || null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [verificationFailed, setVerificationFailed] = useState(false);
@@ -23,12 +36,18 @@ export default function VerifyScreen({ route, navigation }: any) {
   }, []);
 
   useEffect(() => {
-    const allDevices = Object.values(devices).filter(Boolean) as CameraDevice[];
-    console.log('📋 Cámaras detectadas:', allDevices);
-    if (allDevices.length > 0) {
-      setSelectedDevice(allDevices[0]);
+    if (hasPermission && devices.length > 0) {
+      const desiredCamera = devices.find(
+        device => device.position === (usingFrontCamera ? 'front' : 'back'),
+      );
+      if (desiredCamera) {
+        setSelectedDevice(desiredCamera);
+        console.log(`📷 Cámara ${usingFrontCamera ? 'frontal' : 'trasera'} seleccionada`);
+      } else {
+        console.log('❌ No se encontró la cámara solicitada');
+      }
     }
-  }, [devices]);
+  }, [hasPermission, devices, usingFrontCamera]);
 
   useEffect(() => {
     const loadReference = async () => {
@@ -45,46 +64,59 @@ export default function VerifyScreen({ route, navigation }: any) {
 
   const verifyIdentity = async () => {
     try {
-      console.log('📸 Iniciando captura...');
       const photo: PhotoFile | undefined = await camera.current?.takePhoto({});
       if (!photo) throw new Error('No se pudo capturar la foto');
       console.log('📸 Foto capturada en:', photo.path);
 
       const imageData = await fetch(`file://${photo.path}`);
       const blob = await imageData.blob();
-      const reader = new FileReader();
 
-      reader.onloadend = async () => {
-        const live = reader.result?.toString().split(',')[1];
-        setPreviewImage(reader.result?.toString() || null);
-        console.log('🧠 Imagen en base64 lista para enviar');
-
-        const response = await axios.post('http://192.168.100.41:5000/verify', {
-          reference,
-          live,
-        });
-
-        console.log('📨 Respuesta del backend:', response.data);
-
-        if (response.data.status === 'success') {
-          if (!response.data.face_detected) {
-            Alert.alert('❌ No se detectó rostro en la imagen capturada');
-            return;
-          }
-
-          if (response.data.match) {
-            Alert.alert('✅ Verificación exitosa');
-            navigation.navigate('Success');
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result?.toString();
+          if (result) {
+            resolve(result.split(',')[1]);
           } else {
-            Alert.alert('❌ Rostro no coincide', 'Intenta capturar la imagen nuevamente.');
-            setVerificationFailed(true);
+            reject('No se pudo leer la imagen');
           }
-        } else {
-          Alert.alert('⚠️ Error en el backend', response.data.message || 'Intenta más tarde.');
-        }
-      };
+        };
+        reader.onerror = () => reject('Error al leer la imagen');
+        reader.readAsDataURL(blob);
+      });
 
-      reader.readAsDataURL(blob);
+      setPreviewImage(`data:image/jpeg;base64,${base64}`);
+      console.log('🧠 Imagen en base64 lista para enviar');
+
+      if (!reference) {
+        Alert.alert('⚠️ No hay imagen de referencia', 'Por favor captura una imagen de referencia primero.');
+        return;
+      }
+
+      const response = await axios.post('http://192.168.100.41:5000/verify', {
+        reference,
+        live: base64,
+      });
+
+      console.log('📨 Respuesta del backend verified:', response.data);
+
+      if (response.data.status === 'success') {
+        if (!response.data.face_detected) {
+          Alert.alert('❌ No se detectó rostro', 'Asegúrate de estar bien encuadrada y con buena iluminación.');
+          return;
+        }
+
+        if (response.data.match) {
+          Alert.alert('✅ Verificación exitosa', 'Tu rostro coincide con la referencia.', [
+            { text: 'Continuar', onPress: () => navigation.navigate('Success') },
+          ]);
+        } else {
+          Alert.alert('❌ Verificación fallida', 'Tu rostro no coincide con la referencia. Intenta nuevamente.');
+          setVerificationFailed(true);
+        }
+      } else {
+        Alert.alert('⚠️ Error en el backend', response.data.message || 'Intenta más tarde.');
+      }
     } catch (error: any) {
       console.log('❌ Error en verificación:', error.message);
       Alert.alert('Error', error.message);
@@ -101,23 +133,48 @@ export default function VerifyScreen({ route, navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Camera ref={camera} style={StyleSheet.absoluteFill} device={selectedDevice} isActive={true} photo={true} />
+      <Camera
+        ref={camera}
+        style={StyleSheet.absoluteFill}
+        device={selectedDevice}
+        isActive={true}
+        photo={true}
+      />
+
       <TouchableOpacity style={styles.captureButton} onPress={verifyIdentity}>
-        <Text style={styles.buttonText}>🔐 Verificar identidad</Text>
+        <Text style={styles.buttonText}>Verificar</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.switchButton}
+        onPress={() => {
+          setUsingFrontCamera(prev => !prev);
+          setPreviewImage(null);
+          setVerificationFailed(false);
+        }}
+      >
+        <Text style={styles.switchText}>🔄</Text>
       </TouchableOpacity>
 
       {previewImage && (
         <View style={styles.previewBox}>
           <Text style={styles.previewText}>🖼️ Imagen capturada:</Text>
-          <Image source={{ uri: previewImage }} style={styles.previewImage} resizeMode="contain" />
+          <Image
+            source={{ uri: previewImage }}
+            style={styles.previewImage}
+            resizeMode="contain"
+          />
         </View>
       )}
 
       {verificationFailed && (
-        <TouchableOpacity style={styles.retryButton} onPress={() => {
-          setVerificationFailed(false);
-          setPreviewImage(null);
-        }}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            setVerificationFailed(false);
+            setPreviewImage(null);
+          }}
+        >
           <Text style={styles.retryText}>🔁 Reintentar verificación</Text>
         </TouchableOpacity>
       )}
@@ -127,17 +184,30 @@ export default function VerifyScreen({ route, navigation }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#111' },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#111',
+  },
   text: { color: 'white', fontSize: 16 },
   captureButton: {
     position: 'absolute',
     bottom: 40,
     alignSelf: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#080808ff',
     padding: 15,
     borderRadius: 10,
   },
   buttonText: { color: 'white', fontSize: 18 },
+  switchButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    padding: 10,
+    borderRadius: 16,
+  },
+  switchText: { color: 'white', fontSize: 14 },
   previewBox: {
     marginTop: 20,
     alignItems: 'center',
@@ -153,7 +223,7 @@ const styles = StyleSheet.create({
   },
   retryButton: {
     marginTop: 20,
-    backgroundColor: '#FF6F00',
+    backgroundColor: '#080808ff',
     padding: 12,
     borderRadius: 8,
   },

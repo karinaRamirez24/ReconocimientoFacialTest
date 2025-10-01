@@ -13,9 +13,9 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Reference">
+      <Stack.Navigator initialRouteName="Facial Recognition">
         <Stack.Screen name="Reference1" component={CameraDebugScreen} />
-        <Stack.Screen name="Reference" component={ReferenceScreen} />
+        <Stack.Screen name="Facial Recognition" component={ReferenceScreen} />
         <Stack.Screen name="Verify" component={VerifyScreen} />
         <Stack.Screen name="Success" component={SuccessScreen} />
       </Stack.Navigator>

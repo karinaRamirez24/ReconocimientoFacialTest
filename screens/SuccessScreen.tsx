@@ -7,7 +7,7 @@ export default function SuccessScreen({ navigation }: any) {
       <Text style={styles.title}>✅ Verificación Exitosa</Text>
       <Text style={styles.details}>Tu identidad ha sido confirmada correctamente.</Text>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Home')}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Facial Recognition')}>
         <Text style={styles.buttonText}>🏠 Volver al inicio</Text>
       </TouchableOpacity>
     </View>
